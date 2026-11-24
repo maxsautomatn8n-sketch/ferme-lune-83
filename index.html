@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-r7PjOkxCQRed/g32POO8uJ6+syR6PCGhoU5DRpz0y+c='; style-src 'sha256-ofRbGw4DVq5GJRBKITeoLtwSDZ2U+p7mgFdgMzNgV0M='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-i1TXZL5UWJMPlPK6m190x17rh3Ea9ZnFm2ZcQtX5S2s='; style-src 'sha256-zpV6JaquC7IVvREq4RPWTReZtl+YxghCR2TEwktQS6A='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Помощник</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5fbf'/%3E%3Cpath d='M14 18h36v22H28l-9 8v-8h-5z' fill='none' stroke='%23fff' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -127,7 +127,8 @@ h1 { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .titres p { margin: 0; font-size: .7rem; }
 .zoom button { min-height: 38px; width: 38px; font-size: .8rem; }
 #sos { min-height: 40px; padding: 6px 12px; font-size: .85rem; }
-.actions { gap: 6px; }</style>
+.actions { gap: 6px; }
+[hidden] { display: none !important; }</style>
 </head>
 <body>
 <header>
@@ -195,6 +196,12 @@ function appliquerReglages(c) {
   try { localStorage.setItem("papi_cfg", JSON.stringify(reglages)); } catch (e) {}
 }
 
+// Identifiant de la conversation en cours (change à chaque « Новый разговор »)
+function nouveauSid() { try { const b = new Uint8Array(8); crypto.getRandomValues(b); return Array.from(b, x => x.toString(16).padStart(2, "0")).join(""); } catch (e) { return String(Date.now()); } }
+let sid = "";
+try { sid = (localStorage.getItem("papi_s") || "").replace(/[^a-f0-9]/g, "").slice(0, 32); } catch (e) {}
+if (!sid) { sid = nouveauSid(); try { localStorage.setItem("papi_s", sid); } catch (e) {} }
+
 const dejaVus = new Set();
 let occupe = false;
 
@@ -252,7 +259,7 @@ async function api(action, extra = {}) {
   try {
     const r = await fetch(urlWebhook, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: jeton, action, ...extra }), signal: ctrl.signal,
+      body: JSON.stringify({ token: jeton, action, sid, ...extra }), signal: ctrl.signal,
       referrerPolicy: "no-referrer", credentials: "omit", cache: "no-store"
     });
     statut(true);
@@ -351,27 +358,46 @@ if (SR) {
 }
 
 // Accueil
-const jourEl = document.createElement("div"); jourEl.className = "jour";
-jourEl.textContent = new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
-chat.appendChild(jourEl);
-if (!jeton || !urlWebhook) {
-  ajouter("bot", "Эта страница ещё не настроена. Откройте ссылку, которую прислал Максим.");
-} else {
+function salut() { return "Здравствуйте" + (reglages.nom ? ", " + reglages.nom : "") + ". "; }
+function afficherJour(texte) { const d = document.createElement("div"); d.className = "jour"; d.textContent = texte; chat.appendChild(d); }
+function accueil() {
+  chat.replaceChildren();
+  afficherJour(new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" }));
+  if (!jeton || !urlWebhook) { ajouter("bot", "Эта страница ещё не настроена. Откройте ссылку, которую прислал Максим."); return; }
   if (historique.length) {
     historique.forEach(m => ajouter(m.q, m.t, { heure: m.h }));
-    const sep = document.createElement("div"); sep.className = "jour"; sep.textContent = "Сегодня"; chat.appendChild(sep);
-    ajouter("bot", "Здравствуйте" + (reglages.nom ? ", " + reglages.nom : "") + ". Я на связи. Чем помочь?");
+    afficherJour("Сегодня");
+    ajouter("bot", salut() + "Я на связи. Чем помочь?");
   } else {
-    ajouter("bot", "Здравствуйте" + (reglages.nom ? ", " + reglages.nom : "") + ". Я ваш помощник. Спрашивайте о чём угодно: телефон, документы, лекарства, быт.");
+    ajouter("bot", salut() + "Я ваш помощник. Спрашивайте о чём угодно: телефон, документы, лекарства, погода, быт.");
   }
-  [["💊 Лекарства", "Расскажите, как мне не забывать принимать лекарства."],
+}
+accueil();
+if (jeton && urlWebhook) {
+  const puces = [["🆕 Новый разговор", null],
+   ["💊 Лекарства", "Расскажите, как мне не забывать принимать лекарства."],
    ["📄 Документы", "Мне нужна помощь с документами. С чего начать?"],
    ["📱 Телефон", "Помогите разобраться с моим телефоном."],
-   ["☎️ Позвонить родным", "Как мне позвонить Максиму или Инне?"]].forEach(([label, texte]) => {
+   ["☎️ Позвонить родным", "Как мне позвонить Максиму или Инне?"]];
+  puces.forEach(([label, texte]) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = label;
-    b.onclick = () => { champ.value = texte; envoyer(); };
+    b.onclick = texte ? () => { champ.value = texte; envoyer(); } : demanderNouveau;
     $("idees").appendChild(b);
   });
+}
+function demanderNouveau() {
+  boite.replaceChildren(); boite.appendChild(titre("Начать новый разговор?"));
+  const p = document.createElement("p"); p.textContent = "Прежние сообщения исчезнут с экрана."; boite.appendChild(p);
+  const r = document.createElement("div"); r.className = "rep";
+  const oui = document.createElement("button"); oui.className = "ok"; oui.textContent = "Да, начать";
+  const non = document.createElement("button"); non.className = "neutre"; non.textContent = "Нет";
+  non.onclick = fermer;
+  oui.onclick = () => {
+    historique = []; try { localStorage.removeItem("papi_h"); } catch (e) {}
+    sid = nouveauSid(); try { localStorage.setItem("papi_s", sid); } catch (e) {}
+    fermer(); accueil();
+  };
+  r.appendChild(oui); r.appendChild(non); boite.appendChild(r); voile.classList.add("visible");
 }
 
 // Taille du texte : A− / A+ (réglage libre, mémorisé)
