@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-hr2zAofie7+fEmxPqwO8Y/2AVebMo4whsPkgCKj0iPQ='; style-src 'sha256-5JtN+qDEOYu4hWUHnuhpFQfHs3cFFU+lrxqkUWM4LA4='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-r7PjOkxCQRed/g32POO8uJ6+syR6PCGhoU5DRpz0y+c='; style-src 'sha256-ofRbGw4DVq5GJRBKITeoLtwSDZ2U+p7mgFdgMzNgV0M='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Помощник</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5fbf'/%3E%3Cpath d='M14 18h36v22H28l-9 8v-8h-5z' fill='none' stroke='%23fff' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -121,7 +121,13 @@ h1, .titres p { overflow: hidden; text-overflow: ellipsis; }
 @media (max-height: 560px) { #idees { display: none; } header { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 6px; } }
 .zoom { display: flex; background: rgba(255,255,255,.16); border-radius: 22px; overflow: hidden; }
 .zoom button { min-height: 44px; width: 44px; padding: 0; border-radius: 0; background: transparent; color: #fff; font-size: .9rem; font-weight: 700; }
-.zoom button:disabled { opacity: .35; }</style>
+.zoom button:disabled { opacity: .35; }
+/* En-tête compact : nom + point vert, boutons plus petits */
+h1 { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.titres p { margin: 0; font-size: .7rem; }
+.zoom button { min-height: 38px; width: 38px; font-size: .8rem; }
+#sos { min-height: 40px; padding: 6px 12px; font-size: .85rem; }
+.actions { gap: 6px; }</style>
 </head>
 <body>
 <header>
@@ -130,8 +136,8 @@ h1, .titres p { overflow: hidden; text-overflow: ellipsis; }
       <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4.5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></svg>
     </div>
     <div class="titres">
-      <h1>Помощник</h1>
-      <p><span class="vert" id="point" aria-hidden="true"></span><span id="statut">Всегда на связи</span></p>
+      <h1>Помощник<span class="vert" id="point" role="img" aria-label="На связи"></span></h1>
+      <p id="statut" hidden>Нет связи</p>
     </div>
   </div>
   <div class="actions">
@@ -208,7 +214,7 @@ function garder(q, t, h) {
 // État de la connexion (point vert qui pulse)
 function statut(ok) {
   $("point").classList.toggle("hors", !ok);
-  $("statut").textContent = ok ? "Всегда на связи" : "Нет связи";
+  $("statut").hidden = ok;
 }
 
 function ajouter(qui, texte, options = {}) {
