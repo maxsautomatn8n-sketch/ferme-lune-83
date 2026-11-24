@@ -7,12 +7,12 @@
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-/BcSlskoHAFsGBP46RTNqifQ04UOxki63GZi1H39PpI='; style-src 'sha256-qva/3NwDpxGEou1+TAVp7+L/jfS3/CcYC4/Kne4Jyu8='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-O+a8asymdD8G5Gld2T8uIDNa8wOklqCXNY1l2yVO1OU='; style-src 'sha256-5JtN+qDEOYu4hWUHnuhpFQfHs3cFFU+lrxqkUWM4LA4='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Помощник</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5fbf'/%3E%3Cpath d='M14 18h36v22H28l-9 8v-8h-5z' fill='none' stroke='%23fff' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>:root {
---fs: 17px;
+--fs: 14px;
 --fond: #eef2f7; --carte: #ffffff; --texte: #14202e; --discret: #5b6b7d; --bord: #d5dde7;
 --bleu: #1f5fbf; --bleu-fonce: #1f4e79; --bulle-moi: #1f5fbf; --texte-moi: #ffffff;
 --rouge: #c62828; --vert: #1e7a3c; --ambre: #f2a900; --puce: #e4ecf6;
@@ -86,7 +86,7 @@ header .rond { width: 44px; min-height: 44px; background: rgba(255,255,255,.16);
 #idees:empty { display: none; }
 #idees button { flex: 0 0 auto; min-height: 42px; padding: 6px 14px; border-radius: 24px; box-shadow: 0 1px 3px rgba(20,32,46,.12); background: var(--puce); color: var(--texte); font-size: .8rem; font-weight: 600; border: 1px solid var(--bord); white-space: nowrap; }
 #saisie { display: flex; gap: 8px; align-items: flex-end; }
-textarea { flex: 1; font: inherit; font-size: max(16px, 1rem); resize: none; color: var(--texte); background: var(--fond); border: 2px solid var(--bord); border-radius: 26px; padding: 10px 16px; min-height: 50px; max-height: 140px; overflow-y: hidden; }
+textarea { flex: 1; font: inherit; font-size: max(14px, var(--fs)); resize: none; color: var(--texte); background: var(--fond); border: 2px solid var(--bord); border-radius: 26px; padding: 10px 16px; min-height: 50px; max-height: 140px; overflow-y: hidden; }
 textarea::placeholder { color: var(--discret); }
 #micro { background: var(--puce); font-size: 1.3rem; }
 #micro.ecoute { background: var(--rouge); color: #fff; animation: p 1.1s infinite; }
@@ -118,7 +118,10 @@ h1, .titres p { overflow: hidden; text-overflow: ellipsis; }
 .titres p span:last-child { overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 430px) { .avatar { display: none; } }
 /* Clavier ouvert (écran bas) : on libère la place pour la conversation */
-@media (max-height: 560px) { #idees { display: none; } header { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 6px; } }</style>
+@media (max-height: 560px) { #idees { display: none; } header { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 6px; } }
+.zoom { display: flex; background: rgba(255,255,255,.16); border-radius: 22px; overflow: hidden; }
+.zoom button { min-height: 44px; width: 44px; padding: 0; border-radius: 0; background: transparent; color: #fff; font-size: .9rem; font-weight: 700; }
+.zoom button:disabled { opacity: .35; }</style>
 </head>
 <body>
 <header>
@@ -132,7 +135,7 @@ h1, .titres p { overflow: hidden; text-overflow: ellipsis; }
     </div>
   </div>
   <div class="actions">
-    <button id="taille" class="rond" type="button" aria-label="Размер текста" title="Размер текста">Аа</button>
+    <div class="zoom"><button id="moins" type="button" aria-label="Мельче">А−</button><button id="plus" type="button" aria-label="Крупнее">А+</button></div>
     <button id="sos" type="button">🆘 Помощь</button>
   </div>
 </header>
@@ -365,13 +368,18 @@ if (!jeton || !urlWebhook) {
   });
 }
 
-// Taille du texte : нормальный / крупный / очень крупный (mémorisée)
-const TAILLES = ["", "g", "tg"];
-let taille = 0;
-try { taille = Math.max(0, TAILLES.indexOf(localStorage.getItem("papi_t") || "")); } catch (e) {}
-function appliquerTaille() { if (TAILLES[taille]) document.documentElement.dataset.taille = TAILLES[taille]; else delete document.documentElement.dataset.taille; }
+// Taille du texte : A− / A+ (réglage libre, mémorisé)
+const PX = [11, 12, 13, 14, 15, 16, 17, 19, 21, 23];
+let taille = 3;
+try { const v = parseInt(localStorage.getItem("papi_px") || "", 10); if (v >= 0 && v < PX.length) taille = v; } catch (e) {}
+function appliquerTaille() {
+  document.documentElement.style.setProperty("--fs", PX[taille] + "px");
+  $("moins").disabled = taille === 0; $("plus").disabled = taille === PX.length - 1;
+  try { localStorage.setItem("papi_px", String(taille)); } catch (e) {}
+}
 appliquerTaille();
-$("taille").onclick = () => { taille = (taille + 1) % TAILLES.length; appliquerTaille(); try { localStorage.setItem("papi_t", TAILLES[taille]); } catch (e) {} defiler(); };
+$("moins").onclick = () => { if (taille > 0) { taille--; appliquerTaille(); defiler(); } };
+$("plus").onclick = () => { if (taille < PX.length - 1) { taille++; appliquerTaille(); defiler(); } };
 
 // Application installable : la page se charge même sans réseau (le SOS reste utilisable)
 if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(() => {}); }
