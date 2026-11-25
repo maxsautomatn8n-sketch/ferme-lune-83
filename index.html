@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-i1TXZL5UWJMPlPK6m190x17rh3Ea9ZnFm2ZcQtX5S2s='; style-src 'sha256-zpV6JaquC7IVvREq4RPWTReZtl+YxghCR2TEwktQS6A='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jaVSmkBt2BwiMsoeTJ/5fJBT0TVvZujjkzMJ8y+CgeY='; style-src 'sha256-zpV6JaquC7IVvREq4RPWTReZtl+YxghCR2TEwktQS6A='; connect-src https:; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Помощник</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5fbf'/%3E%3Cpath d='M14 18h36v22H28l-9 8v-8h-5z' fill='none' stroke='%23fff' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
@@ -416,23 +416,17 @@ $("plus").onclick = () => { if (taille < PX.length - 1) { taille++; appliquerTai
 // Application installable : la page se charge même sans réseau (le SOS reste utilisable)
 if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js").catch(() => {}); }
 
-// Lecture des rappels déposés par n8n (seulement quand la page est visible, pour ne pas user le quota n8n)
+// Lecture des rappels : seulement à l'ouverture et au retour sur la page (jamais en boucle),
+// pour ne pas consommer le quota d'exécutions n8n. Les réponses du chat transportent déjà les rappels.
+let dernierSondage = 0;
 async function sonder() {
   if (document.hidden) return;
+  if (Date.now() - dernierSondage < 120000) return;
+  dernierSondage = Date.now();
   const rep = await api("poll");
   if (rep && rep.ok) montrerRappels(rep.reminders);
 }
-setInterval(sonder, CONFIG.intervalleSondageMs);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) sonder(); });
-sonder();
-
-/* Clavier du téléphone : la page suit la hauteur réellement visible */
-if (window.visualViewport) {
-  const vv = window.visualViewport;
-  const ajuster = () => { document.body.style.height = vv.height + "px"; window.scrollTo(0, 0); defiler(); };
-  vv.addEventListener("resize", ajuster);
-  vv.addEventListener("scroll", () => window.scrollTo(0, 0));
-}
-champ.addEventListener("focus", () => setTimeout(defiler, 300));</script>
+sonder();</script>
 </body>
 </html>
